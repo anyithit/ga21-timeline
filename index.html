@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spiceworks Myanmar - 21st General Assembly</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brandBlue: { 900: '#0a192f', 800: '#112240', 700: '#233554' },
+                        brandGold: { 300: '#fde047', 400: '#facc15', 500: '#eab308' }
+                    },
+                    animation: { 'fade-in-up': 'fadeInUp 0.8s ease-out forwards' },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a192f; }
+        ::-webkit-scrollbar-thumb { background: #facc15; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #eab308; }
+
+        body { background: #0a192f; }
+        .tabular { font-variant-numeric: tabular-nums; }
+
+        /* Timeline track (unfilled) */
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            left: 24px;
+            width: 4px;
+            background: #233554;
+            border-radius: 4px;
+            transform: translateX(-50%);
+        }
+        /* Live progress fill + "now" marker share the same x position */
+        .timeline-progress, .now-marker { left: 24px; }
+        @media (min-width: 768px) {
+            .timeline-container::before,
+            .timeline-progress,
+            .now-marker { left: 50%; }
+        }
+        .timeline-progress {
+            position: absolute;
+            top: 0;
+            width: 4px;
+            height: 0;
+            transform: translateX(-50%);
+            background: linear-gradient(to bottom, #eab308, #facc15);
+            border-radius: 4px;
+            box-shadow: 0 0 12px rgba(250, 204, 21, 0.6);
+            transition: height 0.8s ease;
+            z-index: 1;
+        }
+        .now-marker {
+            position: absolute;
+            top: 0;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            transition: top 0.8s ease;
+            pointer-events: none;
+        }
+        .now-ping {
+            animation: nowPing 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes nowPing {
+            0% { transform: scale(1); opacity: 0.7; }
+            80%, 100% { transform: scale(2.6); opacity: 0; }
+        }
+
+        /* Scroll reveal */
+        .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.7s ease-out, transform 0.7s ease-out; }
+        .reveal.in-view { opacity: 1; transform: none; }
+
+        /* Item states */
+        .item-done .card { opacity: 0.55; }
+        .item-done .card:hover { opacity: 0.9; }
+        .item-live .card {
+            border-color: #facc15 !important;
+            box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.4), 0 10px 40px rgba(250, 204, 21, 0.18);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .reveal { opacity: 1; transform: none; transition: none; }
+            .now-ping, .animate-pulse, .animate-fade-in-up { animation: none !important; opacity: 1 !important; }
+            .timeline-progress, .now-marker { transition: none; }
+        }
+    </style>
+</head>
+<body class="bg-brandBlue-900 text-slate-200 font-sans antialiased overflow-x-hidden selection:bg-brandGold-400 selection:text-brandBlue-900">
+
+    <!-- Hero -->
+    <header class="relative min-h-[60vh] flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 py-16 bg-gradient-to-br from-brandBlue-900 to-brandBlue-800 overflow-hidden">
+        <div class="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+            <div class="absolute -top-24 -right-24 w-96 h-96 bg-brandGold-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+            <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+        </div>
+
+        <div class="relative z-10 max-w-4xl mx-auto space-y-6 w-full">
+            <h2 class="text-brandGold-400 text-lg sm:text-xl font-semibold tracking-widest uppercase animate-fade-in-up">Spiceworks Myanmar</h2>
+            <h1 class="text-5xl sm:text-6xl md:text-7xl font-extrabold text-white tracking-tight animate-fade-in-up">
+                21<span class="text-3xl sm:text-4xl align-top">st</span> General Assembly
+            </h1>
+            <p class="mt-4 text-xl sm:text-2xl text-slate-300 font-light animate-fade-in-up">
+                <span id="hero-date">Friday, November 27, 2026</span>
+                <span class="block sm:inline text-base sm:text-lg text-slate-400 sm:ml-2" id="hero-range"></span>
+            </p>
+
+            <!-- Live status -->
+            <div id="status-card" class="mx-auto max-w-xl rounded-2xl border border-brandBlue-700 bg-brandBlue-800/70 backdrop-blur px-5 py-4 animate-fade-in-up" aria-live="polite">
+                <div id="status-label" class="text-xs font-bold tracking-widest uppercase text-slate-400">Starts in</div>
+                <div id="status-main" class="mt-1 text-2xl sm:text-3xl font-bold text-white tabular">&nbsp;</div>
+                <div id="status-sub" class="mt-1 text-sm text-slate-400"></div>
+            </div>
+
+            <div class="mt-8 animate-fade-in-up">
+                <a href="#schedule" class="inline-flex items-center justify-center px-8 py-3 text-base font-medium rounded-full text-brandBlue-900 bg-brandGold-400 hover:bg-brandGold-300 transition-colors duration-300 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_30px_rgba(250,204,21,0.5)]">
+                    View Schedule
+                    <svg class="ml-2 -mr-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sticky time zone bar -->
+    <div class="sticky top-0 z-40 bg-brandBlue-900/90 backdrop-blur border-b border-brandBlue-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span class="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60 now-ping"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-400"></span>
+                </span>
+                <span class="text-sm text-slate-400">Now</span>
+                <span id="clock" class="text-lg font-bold text-white tabular">--:--:--</span>
+                <span id="clock-zone" class="text-xs font-semibold text-brandGold-400 tracking-wider uppercase"></span>
+            </div>
+            <div role="group" aria-label="Time zone" id="tz-switch" class="flex flex-wrap gap-1 p-1 rounded-full bg-brandBlue-800 border border-brandBlue-700 self-start sm:self-auto"></div>
+        </div>
+    </div>
+
+    <!-- Schedule -->
+    <main id="schedule" class="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto relative scroll-mt-20">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Event Timeline</h2>
+            <div class="w-24 h-1 bg-brandGold-400 mx-auto rounded-full"></div>
+            <p id="tz-note" class="mt-4 text-sm text-slate-400"></p>
+        </div>
+
+        <div id="timeline" class="timeline-container relative w-full pt-8 pb-8">
+            <div id="progress" class="timeline-progress"></div>
+            <div id="now-marker" class="now-marker hidden">
+                <span class="absolute inset-0 rounded-full bg-brandGold-400 now-ping"></span>
+                <span class="relative block w-4 h-4 rounded-full bg-white border-4 border-brandGold-400"></span>
+            </div>
+            <!-- items rendered by script -->
+        </div>
+    </main>
+
+    <footer class="bg-brandBlue-900 border-t border-brandBlue-800 py-8 mt-12">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center text-slate-500 text-sm">
+            <p>&copy; 2026 Spiceworks Myanmar. All rights reserved.</p>
+            <p class="mt-2 md:mt-0">21st General Assembly Event Schedule</p>
+        </div>
+    </footer>
+
+    <script>
+    (function () {
+        'use strict';
+
+        /* ---------------- Data (source times are Asia/Yangon, UTC+06:30) ---------------- */
+        const EVENT_DATE = '2026-11-27';
+        const SOURCE_OFFSET = '+06:30';
+        const at = (hhmm) => new Date(EVENT_DATE + 'T' + hhmm + ':00' + SOURCE_OFFSET);
+
+        const SCHEDULE = [
+            { start: '13:05', end: '13:05', title: 'Opening Declaration',
+              desc: 'Official launch of the 21st General Assembly.', accent: 'bg-brandGold-400' },
+            { start: '13:05', end: '13:20', title: "CEO's Address", speaker: 'Mr. Seiji Sekine',
+              desc: 'Strategic insights and future direction for Spiceworks Myanmar.', accent: 'bg-blue-500' },
+            { start: '13:20', end: '13:35', title: "COO's Address", speaker: 'Ko Myat Min Swe',
+              desc: 'Operational updates, achievements, and structural goals.', accent: 'bg-blue-400' },
+            { start: '13:35', end: '14:35', title: '6-Month Strategic Roadmaps', featured: true,
+              desc: 'Group Leaders present upcoming operational goals and strategies for the next 6 months.',
+              list: ['BM Group', 'System Group', 'Design Group', 'Education Group', 'Marketing Group'],
+              accent: 'bg-brandGold-400' },
+            { start: '14:35', end: '14:45', title: 'Intermission / Networking Break', isBreak: true },
+            { start: '14:45', end: '15:45', title: 'Team Building Games',
+              desc: 'Interactive group activities designed to foster collaboration and teamwork.', accent: 'bg-green-400' },
+            { start: '15:45', end: '16:00', title: 'Game Awards Presentation',
+              desc: 'Celebrating the winning teams from the team-building activities.', accent: 'bg-brandGold-500' },
+            { start: '16:00', end: '16:15', title: '360 Degree Awards', highlight: true,
+              desc: 'Recognizing individual top performers and outstanding team contributions across the company.',
+              accent: 'bg-yellow-300' },
+            { start: '16:15', end: '16:20', title: 'Group Photo',
+              desc: 'Commemorating the assembly with a full company photograph.', accent: 'bg-purple-400' },
+            { start: '16:20', end: '16:20', title: 'Closing Declaration',
+              desc: 'Official conclusion of the 21st General Assembly.', accent: 'bg-brandGold-400' },
+        ].map((it) => Object.assign({}, it, { startAt: at(it.start), endAt: at(it.end) }));
+
+        const EVENT_START = SCHEDULE[0].startAt;
+        const EVENT_END = SCHEDULE[SCHEDULE.length - 1].endAt;
+
+        /* ---------------- Time zones ---------------- */
+        const ZONES = [
+            { id: 'Asia/Yangon', city: 'Yangon', abbr: 'MMT', aliases: ['Asia/Rangoon'] },
+            { id: 'Asia/Tokyo',  city: 'Tokyo',  abbr: 'JST', aliases: ['Japan'] },
+            { id: 'Asia/Manila', city: 'Manila', abbr: 'PHT', aliases: [] },
+        ];
+
+        function browserZone() {
+            try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch (e) { return null; }
+        }
+
+        function offsetLabel(tz, date) {
+            try {
+                const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' })
+                    .formatToParts(date).find((x) => x.type === 'timeZoneName');
+                return p ? p.value.replace('GMT', 'UTC') : '';
+            } catch (e) { return ''; }
+        }
+
+        // If the browser zone is not one of the three, offer it as an extra "Local" choice.
+        const detected = browserZone();
+        let detectedMatch = ZONES.find((z) => z.id === detected || z.aliases.includes(detected));
+        if (!detectedMatch && detected) {
+            const local = { id: detected, city: 'Local', abbr: '', aliases: [], local: true };
+            ZONES.push(local);
+            detectedMatch = local;
+        }
+
+        let currentTz = (detectedMatch || ZONES[0]).id;
+        try {
+            const saved = localStorage.getItem('ga21-tz');
+            if (saved && ZONES.some((z) => z.id === saved)) currentTz = saved;
+        } catch (e) { /* storage unavailable */ }
+
+        const zoneOf = (id) => ZONES.find((z) => z.id === id);
+        const zoneShort = (z) => z.abbr || offsetLabel(z.id, EVENT_START);
+
+        /* ---------------- Clock (supports ?now=ISO for previewing) ---------------- */
+        let clockOffset = 0;
+        try {
+            const q = new URLSearchParams(location.search).get('now');
+            if (q) {
+                const t = new Date(q);
+                if (!isNaN(t)) clockOffset = t.getTime() - Date.now();
+            }
+        } catch (e) { /* ignore */ }
+        const now = () => new Date(Date.now() + clockOffset);
+
+        /* ---------------- Formatting ---------------- */
+        const fmtCache = {};
+        function fmt(date, tz, opts) {
+            const key = tz + JSON.stringify(opts);
+            if (!fmtCache[key]) fmtCache[key] = new Intl.DateTimeFormat('en-US', Object.assign({ timeZone: tz }, opts));
+            return fmtCache[key].format(date);
+        }
+        const timeHM = (d, tz) => fmt(d, tz, { hour: 'numeric', minute: '2-digit', hour12: true });
+        const timeHMS = (d, tz) => fmt(d, tz, { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+        const dateLong = (d, tz) => fmt(d, tz, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const dayShort = (d, tz) => fmt(d, tz, { month: 'short', day: 'numeric' });
+
+        function splitTime(d, tz) {
+            const s = timeHM(d, tz);            // "1:05 PM"
+            const m = s.match(/^(.*)\s(AM|PM)$/);
+            return m ? { hm: m[1], ap: m[2] } : { hm: s, ap: '' };
+        }
+        function rangeLabel(a, b, tz) {
+            const A = splitTime(a, tz), B = splitTime(b, tz);
+            if (a.getTime() === b.getTime()) return timeHM(a, tz);
+            if (A.ap === B.ap) return A.hm + ' – ' + B.hm + ' ' + B.ap;
+            return timeHM(a, tz) + ' – ' + timeHM(b, tz);
+        }
+        const minutes = (it) => Math.round((it.endAt - it.startAt) / 60000);
+
+        function humanDuration(ms) {
+            const s = Math.max(0, Math.floor(ms / 1000));
+            const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600),
+                  m = Math.floor((s % 3600) / 60), sec = s % 60;
+            const pad = (n) => String(n).padStart(2, '0');
+            if (d > 0) return d + 'd ' + pad(h) + 'h ' + pad(m) + 'm ' + pad(sec) + 's';
+            if (h > 0) return h + 'h ' + pad(m) + 'm ' + pad(sec) + 's';
+            return pad(m) + 'm ' + pad(sec) + 's';
+        }
+        function minsLeft(ms) {
+            const m = Math.ceil(ms / 60000);
+            return m <= 1 ? 'less than a minute left' : m + ' min left';
+        }
+
+        const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        /* ---------------- Render timeline ---------------- */
+        const timelineEl = document.getElementById('timeline');
+
+        function itemHTML(it, i) {
+            const mins = minutes(it);
+            const accentSide = i % 2 === 1 ? 'left-0 md:left-auto md:right-0' : 'left-0';
+            const durBadge = mins > 0
+                ? '<span class="text-xs ' + (it.featured || it.highlight ? 'text-brandGold-300 font-bold' : 'text-slate-400 font-semibold') + ' tracking-wider uppercase">' + mins + ' mins</span>'
+                : '';
+            const stateBadge = '<span data-role="state" class="ml-auto text-[11px] font-bold tracking-wider uppercase"></span>';
+            const timeChip = '<span data-role="time" class="px-3 py-1 bg-brandBlue-900 text-brandGold-400 rounded-md text-sm font-bold shadow-inner tabular' + (it.featured ? ' border border-brandGold-400/20' : '') + '"></span>';
+            const srcTime = '<p data-role="src" class="text-[11px] text-slate-500 mt-1 hidden"></p>';
+            const liveBar = '<div data-role="bar" class="hidden mt-4 h-1.5 w-full rounded-full bg-brandBlue-900 overflow-hidden"><div data-role="barfill" class="h-full bg-brandGold-400 rounded-full transition-[width] duration-700" style="width:0%"></div></div>';
+
+            let card;
+            if (it.isBreak) {
+                card =
+                    '<div class="card bg-brandBlue-800/50 p-4 rounded-xl shadow-md border border-brandBlue-700 transition-all duration-300">' +
+                        '<div class="flex items-center gap-4">' +
+                            '<div class="flex-1">' +
+                                '<div class="flex items-center gap-3 mb-1 flex-wrap">' +
+                                    '<span data-role="time" class="text-slate-300 font-bold tabular"></span>' +
+                                    '<span class="text-xs text-slate-500 font-semibold uppercase">' + mins + ' mins</span>' +
+                                    stateBadge +
+                                '</div>' +
+                                '<h3 class="text-lg font-medium text-slate-200">' + esc(it.title) + '</h3>' +
+                                srcTime +
+                            '</div>' +
+                            '<svg class="w-8 h-8 text-slate-400 opacity-50 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"></path></svg>' +
+                        '</div>' +
+                        liveBar +
+                    '</div>';
+            } else {
+                const cardBg = it.featured
+                    ? 'bg-gradient-to-br from-brandBlue-800 to-brandBlue-900 border-brandGold-400/30 hover:border-brandGold-400'
+                    : it.highlight
+                        ? 'bg-gradient-to-tr from-brandBlue-800 to-brandBlue-700 border-brandGold-400/50 hover:border-brandGold-300 shadow-[0_10px_30px_rgba(0,0,0,0.5)]'
+                        : 'bg-brandBlue-800 border-brandBlue-700 hover:border-brandGold-400/50';
+                const title = it.highlight
+                    ? '<h3 class="text-xl font-bold text-brandGold-300 mb-2 flex items-center"><svg class="w-6 h-6 mr-2 text-brandGold-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>' + esc(it.title) + '</h3>'
+                    : '<h3 class="text-xl font-bold text-white ' + (it.speaker ? 'mb-1' : it.featured ? 'mb-3' : 'mb-2') + '">' + esc(it.title) + '</h3>';
+                const speaker = it.speaker ? '<p class="text-blue-300 text-sm font-medium mb-2">' + esc(it.speaker) + '</p>' : '';
+                const list = it.list
+                    ? '<ul class="space-y-2">' + it.list.map((g, k) =>
+                        '<li class="flex items-center text-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brandGold-400 mr-2"></span>(' + (k + 1) + ') ' + esc(g) + '</li>').join('') + '</ul>'
+                    : '';
+                card =
+                    '<div class="card ' + cardBg + ' p-6 rounded-xl shadow-xl border transition-all duration-300 relative overflow-hidden">' +
+                        '<div class="absolute top-0 ' + accentSide + ' w-1 h-full ' + it.accent + '"></div>' +
+                        (it.highlight ? '<div class="absolute -right-6 -top-6 w-24 h-24 bg-brandGold-400/10 rounded-full blur-xl"></div>' : '') +
+                        '<div class="flex items-center gap-3 mb-2 flex-wrap">' + timeChip + durBadge + stateBadge + '</div>' +
+                        title + speaker +
+                        '<p class="' + (it.highlight ? 'text-slate-300 relative z-10' : 'text-slate-400') + ' text-sm' + (it.list ? ' mb-4' : '') + '">' + esc(it.desc) + '</p>' +
+                        list + srcTime + liveBar +
+                    '</div>';
+            }
+
+            const dotColor = it.isBreak ? 'bg-slate-400' : 'bg-brandGold-400 shadow-[0_0_10px_rgba(250,204,21,0.8)]';
+            return (
+                '<div data-index="' + i + '" class="tl-item reveal relative flex items-center md:justify-normal ' + (i % 2 === 0 ? 'md:flex-row-reverse' : '') + ' group ' + (i === SCHEDULE.length - 1 ? 'mb-0' : 'mb-12') + '">' +
+                    '<div data-role="dot" class="absolute left-[24px] md:left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 ' + dotColor + ' rounded-full border-4 border-brandBlue-900 z-10 group-hover:scale-125 transition-transform duration-300"></div>' +
+                    '<div class="w-full md:w-[45%] pl-14 md:pl-0">' + card + '</div>' +
+                '</div>'
+            );
+        }
+
+        timelineEl.insertAdjacentHTML('beforeend', SCHEDULE.map(itemHTML).join(''));
+        const itemEls = Array.from(timelineEl.querySelectorAll('.tl-item'));
+
+        // Scroll reveal
+        if ('IntersectionObserver' in window) {
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in-view'); io.unobserve(e.target); } });
+            }, { threshold: 0.1 });
+            itemEls.forEach((el) => io.observe(el));
+        } else {
+            itemEls.forEach((el) => el.classList.add('in-view'));
+        }
+
+        /* ---------------- Time zone switch ---------------- */
+        const switchEl = document.getElementById('tz-switch');
+        function renderSwitch() {
+            switchEl.innerHTML = ZONES.map((z) => {
+                const active = z.id === currentTz;
+                const label = z.local ? 'Local' : z.city;
+                const sub = zoneShort(z);
+                return '<button type="button" data-tz="' + esc(z.id) + '" aria-pressed="' + active + '" title="' + esc(z.id) + '" class="px-3 sm:px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200 ' +
+                    (active ? 'bg-brandGold-400 text-brandBlue-900' : 'text-slate-300 hover:text-white hover:bg-brandBlue-700') + '">' +
+                    esc(label) + ' <span class="text-[11px] font-medium ' + (active ? 'text-brandBlue-900/70' : 'text-slate-500') + '">' + esc(sub) + '</span></button>';
+            }).join('');
+        }
+        switchEl.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-tz]');
+            if (!btn) return;
+            currentTz = btn.getAttribute('data-tz');
+            try { localStorage.setItem('ga21-tz', currentTz); } catch (err) { /* ignore */ }
+            applyZone();
+        });
+
+        function applyZone() {
+            const z = zoneOf(currentTz);
+            renderSwitch();
+
+            document.getElementById('hero-date').textContent = dateLong(EVENT_START, currentTz);
+            document.getElementById('hero-range').textContent =
+                '· ' + rangeLabel(EVENT_START, EVENT_END, currentTz) + ' ' + zoneShort(z);
+            document.getElementById('clock-zone').textContent = (z.local ? z.id.split('/').pop().replace(/_/g, ' ') : z.city) + ' · ' + zoneShort(z);
+
+            const isSource = currentTz === 'Asia/Yangon';
+            document.getElementById('tz-note').textContent =
+                'All times shown in ' + (z.local ? 'your local time (' + z.id + ', ' + offsetLabel(z.id, EVENT_START) + ')' : z.city + ' time (' + z.abbr + ', ' + offsetLabel(z.id, EVENT_START) + ')') +
+                (isSource ? '' : ' · Original schedule in Yangon time (MMT)');
+
+            const startDay = dayShort(EVENT_START, currentTz);
+            itemEls.forEach((el, i) => {
+                const it = SCHEDULE[i];
+                el.querySelector('[data-role="time"]').textContent = rangeLabel(it.startAt, it.endAt, currentTz) +
+                    (dayShort(it.startAt, currentTz) !== startDay ? ' (' + dayShort(it.startAt, currentTz) + ')' : '');
+                const src = el.querySelector('[data-role="src"]');
+                src.textContent = 'Yangon: ' + rangeLabel(it.startAt, it.endAt, 'Asia/Yangon');
+                src.classList.toggle('hidden', isSource);
+            });
+
+            tick();
+            requestAnimationFrame(positionNow);
+        }
+
+        /* ---------------- Live tracking ---------------- */
+        const progressEl = document.getElementById('progress');
+        const markerEl = document.getElementById('now-marker');
+
+        function dotY(i) {
+            const el = itemEls[i];
+            return el.offsetTop + el.offsetHeight / 2;
+        }
+
+        function positionNow() {
+            const t = now().getTime();
+            let y;
+            if (t < EVENT_START.getTime()) {
+                y = 0;
+            } else if (t >= EVENT_END.getTime()) {
+                y = dotY(itemEls.length - 1);
+            } else {
+                // last anchor with start <= now, then interpolate to the next later anchor
+                let a = 0;
+                for (let i = 0; i < SCHEDULE.length; i++) if (SCHEDULE[i].startAt.getTime() <= t) a = i;
+                let b = a + 1;
+                while (b < SCHEDULE.length && SCHEDULE[b].startAt.getTime() <= SCHEDULE[a].startAt.getTime()) b++;
+                if (b >= SCHEDULE.length) { y = dotY(a); }
+                else {
+                    const ta = SCHEDULE[a].startAt.getTime(), tb = SCHEDULE[b].startAt.getTime();
+                    const f = Math.min(1, Math.max(0, (t - ta) / (tb - ta)));
+                    y = dotY(a) + f * (dotY(b) - dotY(a));
+                }
+            }
+            progressEl.style.height = y + 'px';
+            const live = t >= EVENT_START.getTime() && t < EVENT_END.getTime();
+            markerEl.classList.toggle('hidden', !live);
+            markerEl.style.top = y + 'px';
+        }
+
+        const STATE_STYLES = {
+            done: { text: '✓ Done', cls: 'text-slate-500' },
+            live: { text: '● Live now', cls: 'text-red-400 animate-pulse' },
+            next: { text: 'Up next', cls: 'text-brandGold-400' },
+            upcoming: { text: '', cls: '' },
+        };
+
+        let lastLiveIndex = null;
+
+        function tick() {
+            const n = now();
+            const t = n.getTime();
+            document.getElementById('clock').textContent = timeHMS(n, currentTz);
+
+            // Item states
+            let liveIdx = -1, nextIdx = -1;
+            SCHEDULE.forEach((it, i) => {
+                const s = it.startAt.getTime(), e = it.endAt.getTime();
+                const point = s === e;
+                if (!point && t >= s && t < e) liveIdx = i;
+                if (nextIdx === -1 && t < s) nextIdx = i;
+            });
+
+            SCHEDULE.forEach((it, i) => {
+                const el = itemEls[i];
+                const s = it.startAt.getTime(), e = it.endAt.getTime();
+                let state;
+                if (i === liveIdx) state = 'live';
+                else if (t >= e && (s !== e || t >= s)) state = 'done';
+                else if (i === nextIdx) state = 'next';
+                else state = 'upcoming';
+
+                el.classList.toggle('item-done', state === 'done');
+                el.classList.toggle('item-live', state === 'live');
+                const badge = el.querySelector('[data-role="state"]');
+                const st = STATE_STYLES[state];
+                badge.textContent = st.text;
+                badge.className = 'ml-auto text-[11px] font-bold tracking-wider uppercase ' + st.cls;
+
+                const bar = el.querySelector('[data-role="bar"]');
+                bar.classList.toggle('hidden', state !== 'live');
+                if (state === 'live') {
+                    el.querySelector('[data-role="barfill"]').style.width = (((t - s) / (e - s)) * 100).toFixed(1) + '%';
+                }
+            });
+
+            // Status card
+            const label = document.getElementById('status-label');
+            const main = document.getElementById('status-main');
+            const sub = document.getElementById('status-sub');
+            if (t < EVENT_START.getTime()) {
+                label.textContent = 'Starts in';
+                main.textContent = humanDuration(EVENT_START - t);
+                sub.textContent = 'Opening at ' + timeHM(EVENT_START, currentTz) + ', ' + dateLong(EVENT_START, currentTz);
+            } else if (t >= EVENT_END.getTime()) {
+                label.textContent = 'Event status';
+                main.textContent = 'The assembly has concluded';
+                sub.textContent = 'Thank you for joining the 21st General Assembly!';
+            } else if (liveIdx !== -1) {
+                const it = SCHEDULE[liveIdx];
+                label.innerHTML = '<span class="text-red-400">● Live now</span>';
+                main.textContent = it.title;
+                const nxt = SCHEDULE[liveIdx + 1];
+                sub.textContent = minsLeft(it.endAt - t) + (nxt ? ' · Next: ' + nxt.title + ' at ' + timeHM(nxt.startAt, currentTz) : '');
+            } else {
+                label.textContent = 'In progress';
+                main.textContent = nextIdx !== -1 ? 'Up next: ' + SCHEDULE[nextIdx].title : '';
+                sub.textContent = nextIdx !== -1 ? 'Starts in ' + humanDuration(SCHEDULE[nextIdx].startAt - t) : '';
+            }
+
+            if (liveIdx !== lastLiveIndex) { lastLiveIndex = liveIdx; positionNow(); }
+        }
+
+        applyZone();
+        setInterval(tick, 1000);
+        setInterval(positionNow, 15000);
+        window.addEventListener('resize', positionNow);
+        // Tailwind's CDN builds styles after load, so re-measure whenever the timeline's layout changes
+        if ('ResizeObserver' in window) new ResizeObserver(() => positionNow()).observe(timelineEl);
+        window.addEventListener('load', positionNow);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(positionNow);
+    })();
+    </script>
+</body>
+</html>
